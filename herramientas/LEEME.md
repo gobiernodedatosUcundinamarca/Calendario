@@ -64,7 +64,7 @@ La app muestra en el subtítulo los años de las actividades cargadas (por ejemp
 - Rechaza con el motivo los archivos que no son `.xlsx`, los que no son el formato, los que tienen columnas
   cambiadas y los que no dicen el área o la unidad líder.
 - Si un área envía varias versiones (mismo «Área o dependencia» y «Sede principal»), vale la más reciente según la
-  fecha de envío. Si falta o empata, según la fecha del archivo. Los archivos idénticos se cuentan una vez.
+  fecha del archivo. Los archivos idénticos se cuentan una vez.
 - Expande las repeticiones a una fila por fecha. Las sesiones que caen en festivo pasan al día hábil siguiente.
   Una fecha puntual en festivo se deja igual y se avisa.
 - Quita las filas idénticas de un mismo archivo. Las parecidas se conservan y se listan para revisar.

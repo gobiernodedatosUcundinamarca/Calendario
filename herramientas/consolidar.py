@@ -21,7 +21,7 @@ porque pegar datos se salta las validaciones de Excel y Google Sheets o LibreOff
 Reglas de consolidación:
   1. Solo se leen archivos .xlsx con las hojas y columnas del formato; los demás se rechazan con el motivo.
   2. Si un área (mismo «Área o dependencia» y «Sede principal») envía varios archivos, vale el más reciente
-     (por «Fecha de envío» y, si empata o falta, por la fecha del archivo). Lo que solo estaba en el anterior
+     (por la fecha del archivo). Lo que solo estaba en el anterior
      queda en la hoja «Reemplazos» para confirmar que no era un envío adicional.
   3. Una fila con errores no entra al calendario: queda en «Errores» con todos sus problemas.
   4. Las repeticiones se expanden a una fila por fecha. Las sesiones que caen en festivo pasan al día hábil
@@ -82,8 +82,7 @@ COLUMNAS_AREA = ((1, 2), (4, 6))
 FILA_ENCABEZADO, PRIMERA_FILA, ULTIMA_FILA_FORMATO = 10, 11, 310
 CAMPOS_AREA = {
     'area': 'Área o dependencia', 'lider': 'Unidad Líder', 'sede': 'Sede principal', 'calendario': 'Calendario principal',
-    'quien': 'Nombre de quien diligencia', 'correo': 'Correo institucional', 'telefono': 'Extensión / teléfono',
-    'envio': 'Fecha de envío', 'visto_bueno': 'Visto bueno del jefe del área (nombre y cargo)',
+    'quien': 'Nombre de quien diligencia', 'correo': 'Correo institucional',
 }
 FECHAS = [f'fecha{i}' for i in range(1, 13)]
 # Columnas A–Z de la tabla de «Formato». La M («✔ Así quedó») es una fórmula y no se lee.
@@ -408,13 +407,7 @@ def leer_datos_area(a: Archivo, hoja) -> None:
         aviso(f'El «Calendario principal» «{texto(a.datos["calendario"])}» no es Académico ni Administrativo: '
               'las filas sin calendario quedarán con error')
     a.datos['calendario'] = calendario
-    envio = a.datos['envio']
-    try:
-        a.datos['envio'] = None if vacio(envio) else leer_fecha(envio, 'Fecha de envío')[0]
-    except ValueError:
-        a.datos['envio'] = None
-        aviso(f'La «Fecha de envío» «{texto(envio)}» no es una fecha: se usa la fecha del archivo')
-    for campo in ('quien', 'correo', 'visto_bueno'):
+    for campo in ('quien', 'correo'):
         if vacio(a.datos[campo]):
             aviso(f'Falta «{CAMPOS_AREA[campo]}» en «{DATOS_AREA}»')
     correo = texto(a.datos['correo'])
@@ -641,14 +634,12 @@ def resolver_reenvios(archivos: list[Archivo]) -> list[tuple[Archivo, Archivo, F
     for grupo in grupos.values():
         if len(grupo) < 2:
             continue
-        grupo.sort(key=lambda a: (a.datos['envio'] or dt.date.min, a.modificado))
+        grupo.sort(key=lambda a: a.modificado)
         nuevo = grupo[-1]
         claves_nuevo = {f.clave for f in nuevo.filas} | {clave(n) for _, n, _ in nuevo.errores}
         for viejo in grupo[:-1]:
-            criterio = ('fecha de envío' if viejo.datos['envio'] and nuevo.datos['envio']
-                        and viejo.datos['envio'] != nuevo.datos['envio'] else 'fecha del archivo')
             viejo.estado = 'Reemplazado'
-            viejo.motivo = f'Hay una versión más reciente del área ({criterio}): «{nuevo.ruta.name}»'
+            viejo.motivo = f'Hay una versión más reciente del área (fecha del archivo): «{nuevo.ruta.name}»'
             for f in viejo.filas:
                 if not any(parecido(f.clave, c) >= UMBRAL_PARECIDO for c in claves_nuevo):
                     solo_en_anterior.append((viejo, nuevo, f))
@@ -740,8 +731,7 @@ def escribir_revision(entrada: Path, archivos: list[Archivo], filas: list[Fila],
     reemplazos = [[viejo.ruta.name, nuevo.ruta.name, viejo.area, f.numero, f.actividad, f.ocurrencias[0].inicio]
                   for viejo, nuevo, f in solo_en_anterior]
     lista_archivos = [[a.ruta.name, a.estado, a.motivo, a.area, a.datos.get('lider') or '', a.datos.get('sede') or '',
-                       texto(a.datos.get('quien')), texto(a.datos.get('correo')), texto(a.datos.get('telefono')),
-                       a.datos.get('envio'), texto(a.datos.get('visto_bueno')), a.escritas, len(a.errores),
+                       texto(a.datos.get('quien')), texto(a.datos.get('correo')), a.escritas, len(a.errores),
                        sum(len(f.ocurrencias) for f in a.filas) if a.estado == 'Aceptado' else 0,
                        a.modificado.date() if a.modificado else None, a.huella[:12]]
                       for a in archivos]
@@ -791,8 +781,7 @@ def escribir_revision(entrada: Path, archivos: list[Archivo], filas: list[Fila],
                                   ('Actividad que no está en el nuevo', 50), ('Primera fecha', 13)],
                reemplazos, 'Ningún archivo nuevo dejó por fuera actividades del anterior.')
     hoja_tabla(wb, 'Archivos', [('Archivo', 34), ('Estado', 12), ('Motivo', 60), ('Área', 30), ('Unidad líder', 30),
-                                ('Sede principal', 14), ('Quien diligencia', 24), ('Correo', 30), ('Extensión', 12),
-                                ('Fecha de envío', 12), ('Visto bueno', 30), ('Filas escritas', 9),
+                                ('Sede principal', 14), ('Quien diligencia', 24), ('Correo', 30), ('Filas escritas', 9),
                                 ('Filas con error', 9), ('Fechas en el calendario', 10), ('Fecha del archivo', 12),
                                 ('Huella', 14)], lista_archivos, 'No se encontraron archivos.')
     guardar(wb, REVISION)

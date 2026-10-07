@@ -105,14 +105,13 @@ class App(tk.Tk):
         panel = ttk.PanedWindow(self, orient='vertical')
         panel.pack(fill='both', expand=True, padx=16, pady=(6, 0))
         lista = ttk.Frame(panel)
-        columnas = {'area': ('Área', 260), 'estado': ('Estado', 140), 'filas': ('Filas', 60),
-                    'envio': ('Envío', 90)}
+        columnas = {'area': ('Área', 260), 'estado': ('Estado', 140), 'filas': ('Filas', 60)}
         self.tabla = ttk.Treeview(lista, columns=list(columnas), selectmode='extended')
         self.tabla.heading('#0', text='Archivo')
         self.tabla.column('#0', width=330)
         for clave, (titulo, ancho) in columnas.items():
             self.tabla.heading(clave, text=titulo)
-            self.tabla.column(clave, width=ancho, anchor='center' if clave in ('filas', 'envio') else 'w')
+            self.tabla.column(clave, width=ancho, anchor='center' if clave == 'filas' else 'w')
         self.tabla.tag_configure('listo', foreground=VERDE)
         self.tabla.tag_configure('corregir', foreground='#7a4300')
         self.tabla.tag_configure('nosirve', foreground=ROJO)
@@ -221,11 +220,10 @@ class App(tk.Tk):
         self.archivos = {}
         for i, a in enumerate(archivos):
             texto_estado, color = estado(a)
-            envio = a.datos.get('envio')
             iid = str(i)
             self.archivos[iid] = a
             self.tabla.insert('', 'end', iid=iid, text=str(a.ruta.relative_to(CARPETA)), tags=(color,), values=(
-                a.area or '—', texto_estado, a.escritas or '', envio.strftime('%d/%m/%Y') if envio else ''))
+                a.area or '—', texto_estado, a.escritas or ''))
         elegidos = [i for i, a in self.archivos.items() if a.ruta.name in seleccionar]
         if elegidos:
             self.tabla.selection_set(elegidos)
